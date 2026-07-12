@@ -1,15 +1,19 @@
-"""Finished reference for the mini-palletizer workshop (milestone one).
+"""Finished reference for the mini-palletizer workshop (milestone two).
 
-This is the `palletizer.py` the tutorial builds up one method at a time in
-Phase 4. Keep it here to check your work; write your own version in the repo
-root as you follow the phases.
+This is the `palletizer.py` the tutorial builds up: a static bottom-layer pack
+in Phase 4 (milestone one), then a full collision-free two-layer pack in
+Phase 5 (milestone two) using WorldState obstacles and a held-cube transform.
+Keep it here to check your work; write your own version in the repo root as you
+follow the phases.
 
     uv run reference/palletizer.py move    # send the gripper to a safe pose
     uv run reference/palletizer.py pick    # pick one hand-fed cube
-    uv run reference/palletizer.py pack    # the static bottom-layer pack (default)
+    uv run reference/palletizer.py pack    # the full two-layer pack (default)
 
-Phase 5 extends `move_gripper` with a WorldState of the placed and held cubes
-so the arm can stack the second layer without colliding.
+Note: the first held-cube move can fail with a "start state in collision" error
+because the held-cube geometry overlaps the gripper. If you hit that, allow the
+gripper/held-cube pair with a collision specification (see the Viam motion docs
+on attaching and detaching geometries).
 """
 
 import asyncio
@@ -17,7 +21,16 @@ import sys
 
 from viam.components.gripper import Gripper
 from viam.services.motion import MotionClient
-from viam.proto.common import Pose, PoseInFrame
+from viam.proto.common import (
+    Pose,
+    PoseInFrame,
+    WorldState,
+    GeometriesInFrame,
+    Geometry,
+    RectangularPrism,
+    Vector3,
+    Transform,
+)
 
 import helpers
 from helpers import down_pose
@@ -35,12 +48,48 @@ class Palletizer:
         self.gripper = Gripper.from_robot(robot, helpers.GRIPPER)
         self.placed = []
 
-    async def move_gripper(self, pose: Pose):
+    def obstacles(self, held=False):
+        """Build the WorldState for this move: placed cubes as obstacles, and
+        the carried cube as a transform that rides the gripper."""
+        placed = [
+            GeometriesInFrame(
+                reference_frame="world",
+                geometries=[
+                    Geometry(
+                        center=Pose(x=p.x, y=p.y, z=p.z, o_x=0, o_y=0, o_z=1, theta=0),
+                        box=RectangularPrism(dims_mm=Vector3(x=CUBE, y=CUBE, z=CUBE)),
+                        label=f"placed-{i}",
+                    )
+                ],
+            )
+            for i, p in enumerate(self.placed)
+        ]
+        transforms = []
+        if held:
+            transforms.append(
+                Transform(
+                    reference_frame="held-cube",
+                    pose_in_observer_frame=PoseInFrame(
+                        reference_frame=helpers.GRIPPER,
+                        pose=Pose(x=0, y=0, z=CUBE / 2, o_x=0, o_y=0, o_z=1, theta=0),
+                    ),
+                    physical_object=Geometry(
+                        center=Pose(x=0, y=0, z=0),
+                        box=RectangularPrism(dims_mm=Vector3(x=CUBE, y=CUBE, z=CUBE)),
+                        label="held-cube",
+                    ),
+                )
+            )
+        if not placed and not transforms:
+            return None
+        return WorldState(obstacles=placed, transforms=transforms)
+
+    async def move_gripper(self, pose: Pose, world_state=None):
         destination = PoseInFrame(reference_frame="world", pose=pose)
         await self.motion.move(
             component_name=helpers.ARM,
             destination=destination,
-            world_state=None,
+            world_state=world_state,
         )
 
     async def move(self):
@@ -52,24 +101,24 @@ class Palletizer:
         staging = helpers.STAGING_POSE
         hover = down_pose(staging.x, staging.y, staging.z + APPROACH)
         grasp = down_pose(staging.x, staging.y, staging.z - GRASP_DEPTH)
-        await self.move_gripper(hover)
-        await self.move_gripper(grasp)
+        await self.move_gripper(hover, self.obstacles())
+        await self.move_gripper(grasp, self.obstacles())
         await self.gripper.grab()
-        await self.move_gripper(hover)
+        await self.move_gripper(hover, self.obstacles(held=True))
 
     async def place(self, seq: int):
-        """Place the held cube into bottom-layer grid cell `seq`."""
+        """Place the held cube into grid cell `seq`."""
         target = helpers.grid(helpers.PALLET_ORIGIN, PITCH, CUBE)[seq]
         hover = down_pose(target.x, target.y, target.z + APPROACH)
-        await self.move_gripper(hover)
-        await self.move_gripper(down_pose(target.x, target.y, target.z))
+        await self.move_gripper(hover, self.obstacles(held=True))
+        await self.move_gripper(down_pose(target.x, target.y, target.z), self.obstacles())
         await self.gripper.open()
-        await self.move_gripper(hover)
+        await self.move_gripper(hover, self.obstacles())
         self.placed.append(target)
 
     async def pack(self):
-        """Pack the bottom layer: one cube per grid cell, cells 0 through 3."""
-        for seq in range(4):
+        """Pack both layers: eight cubes, cells 0 through 7."""
+        for seq in range(8):
             input(f"Place a cube on the staging spot, then press Enter (cell {seq})... ")
             await self.pick()
             await self.place(seq)
