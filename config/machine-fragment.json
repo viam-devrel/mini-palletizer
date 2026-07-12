@@ -1,0 +1,44 @@
+{
+  "modules": [
+    {
+      "type": "registry",
+      "name": "devrel_so101-arm",
+      "module_id": "devrel:so101-arm",
+      "version": "latest"
+    }
+  ],
+  "components": [
+    {
+      "name": "arm",
+      "api": "rdk:component:arm",
+      "model": "devrel:so101:arm",
+      "attributes": {
+        "port": "REPLACE_WITH_ARM_PORT"
+      },
+      "frame": {
+        "parent": "world",
+        "translation": { "x": 0, "y": 0, "z": 0 },
+        "orientation": {
+          "type": "ov_degrees",
+          "value": { "x": 0, "y": 0, "z": 1, "th": 0 }
+        }
+      }
+    },
+    {
+      "name": "gripper",
+      "api": "rdk:component:gripper",
+      "model": "devrel:so101:gripper",
+      "attributes": {
+        "port": "REPLACE_WITH_ARM_PORT"
+      },
+      "frame": {
+        "parent": "arm",
+        "translation": { "x": 0, "y": 0, "z": 0 },
+        "orientation": {
+          "type": "ov_degrees",
+          "value": { "x": 0, "y": 0, "z": 1, "th": 0 }
+        }
+      }
+    }
+  ]
+}
