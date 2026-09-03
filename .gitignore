@@ -4,9 +4,5 @@ __pycache__/
 .venv/
 venv/
 
-# uv
-uv.lock
-
 # Local connection details — never commit API keys
 .env
-*.local.py

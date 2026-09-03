@@ -41,7 +41,7 @@ instead of rewriting them.
 | Item | Role |
 |---|---|
 | SO-ARM101 arm + finger gripper | picks and stacks the cubes; connects over USB serial |
-| Eight ~20 mm cubes | what gets packed (fold the template, or use wooden/foam cubes) |
+| Eight ~16 mm cubes | what gets packed (fold the template, or use wooden/foam cubes or dice) |
 | Pallet mat + staging spot | where cubes get stacked and fed from (print the template) |
 | Personal computer | runs `viam-server` and your Python |
 
@@ -56,11 +56,15 @@ instead of rewriting them.
 
 2. **Print the template** at `template/cube-and-pallet-template.pdf` at 100%
    scale (turn off "fit to page"), then fold eight cubes and cut out the pallet
-   mat. Wooden or foam 20 mm cubes work too.
+   mat and the staging square. Wooden or foam 16 mm cubes work too.
 
-3. **Add your machine credentials and taught poses** to `helpers.py`: paste the
-   machine address and API key/ID from your machine's CONNECT tab, and the two
-   anchor poses you read off the arm's test card in Phase 3.
+3. **Add your machine credentials and taught poses.** Fill in the relevant variables in helpers.py: the machine
+   address and API key/ID from your machine's CONNECT tab, plus the two anchor
+   poses you capture in Phase 3. Be sure not to commit credentials if you're going to have a public repo for this work.
+
+   The anchors are **gripper-frame** poses. The gripper's kinematics end at the
+   TCP between the fingertips, and that is the frame the motion service plans
+   for, so read them from the Motion tab of the machine configuration in Viam.
 
 4. **Run a step** (uv installs `viam-sdk` on first run):
 
@@ -78,9 +82,19 @@ instead of rewriting them.
 - `config/machine-fragment.json` mirrors the end state of Phase 2 (arm at the
   world origin, gripper parented to the arm). Replace `REPLACE_WITH_ARM_PORT`
   with your serial port. Use it to check your config; the tutorial has you
-  configure resources by hand with the discovery service.
-- The template dimensions (`CUBE = 20 mm`, `PITCH = 30 mm`) match the constants
+  configure resources by hand with the discovery service. The resource names
+  there (`follower-arm`, `follower-gripper`) must match `ARM` and `GRIPPER` in
+  `helpers.py` — `GRIPPER` doubles as a frame name, so a mismatch fails the move
+  with an unknown-frame error rather than failing quietly.
+- The template dimensions (`CUBE = 16 mm`, `PITCH = 30 mm`) match the constants
   in the code. If you change one, change the other, and regenerate the PDF with
   `uv run --with reportlab python template/generate_template.py`.
-- Never commit real credentials. `helpers.py` ships with placeholders; keep it
-  that way in any fork.
+- The pallet mat fixes the four cells relative to each other; the staging square
+  is a separate cut-out you place wherever the arm reaches. Both anchors are
+  taught by hand, so the code never assumes a distance between them.
+- The reference drives the jaws with the gripper module's `set_position`
+  DoCommand rather than the Gripper API's `open()`/`grab()`. `grab()` keeps
+  pulling against the cube and overloads the servo; a full `open()` swings the
+  moving jaw into cubes already on the pallet. `JAW_OPEN` and `JAW_CLOSED` in
+  `reference/palletizer.py` are calibration values — expect to tune them.
+- Never commit real credentials.
