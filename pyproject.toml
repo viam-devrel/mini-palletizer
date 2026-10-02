@@ -5,7 +5,7 @@ description = "Helpers and reference code for the SO-ARM101 mini-palletizer work
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "viam-sdk>=0.20",
+  "viam-sdk>=0.79",
 ]
 
 [tool.uv]

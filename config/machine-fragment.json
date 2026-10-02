@@ -9,7 +9,7 @@
   ],
   "components": [
     {
-      "name": "arm",
+      "name": "arm-1",
       "api": "rdk:component:arm",
       "model": "devrel:so101:arm",
       "attributes": {
@@ -17,26 +17,44 @@
       },
       "frame": {
         "parent": "world",
-        "translation": { "x": 0, "y": 0, "z": 0 },
+        "translation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
         "orientation": {
           "type": "ov_degrees",
-          "value": { "x": 0, "y": 0, "z": 1, "th": 0 }
+          "value": {
+            "x": 0,
+            "y": 0,
+            "z": 1,
+            "th": 0
+          }
         }
       }
     },
     {
-      "name": "gripper",
+      "name": "gripper-1",
       "api": "rdk:component:gripper",
       "model": "devrel:so101:gripper",
       "attributes": {
         "port": "REPLACE_WITH_ARM_PORT"
       },
       "frame": {
-        "parent": "arm",
-        "translation": { "x": 0, "y": 0, "z": 0 },
+        "parent": "follower-arm",
+        "translation": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
         "orientation": {
           "type": "ov_degrees",
-          "value": { "x": 0, "y": 0, "z": 1, "th": 0 }
+          "value": {
+            "x": 0,
+            "y": 0,
+            "z": 1,
+            "th": 0
+          }
         }
       }
     }

@@ -2,9 +2,9 @@
 
 Produces `cube-and-pallet-template.pdf`:
 - two pages of fold-up cube nets (eight 20 mm cubes total)
-- one pallet mat marking the 2x2 grid at 30 mm pitch plus a staging spot
+- one pallet mat marking the 2x2 grid at 30 mm pitch, plus a cut-out staging square
 
-Dimensions match the workshop code exactly: CUBE = 20 mm, PITCH = 30 mm.
+Dimensions match the workshop code exactly: CUBE = 16 mm, PITCH = 30 mm.
 Print at 100% scale (no "fit to page") so the millimeters come out right.
 
 Run:  uv run --with reportlab python template/generate_template.py
@@ -16,7 +16,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 
-CUBE = 20  # mm, cube side length
+CUBE = 16  # mm, cube side length
 PITCH = 30  # mm, center-to-center pallet spacing
 OUT = os.path.join(os.path.dirname(__file__), "cube-and-pallet-template.pdf")
 
@@ -64,7 +64,7 @@ def draw_cube_net(c, ox, oy):
     # Label the center square.
     c.setFillColorRGB(*FOLD)
     c.setFont("Helvetica", 7)
-    c.drawCentredString(ox + 1.5 * s, oy + 2.5 * s - 3, "20 mm")
+    c.drawCentredString(ox + 1.5 * s, oy + 2.5 * s - 3, "%d mm" % CUBE)
     c.setFillColorRGB(0, 0, 0)
 
 
@@ -85,7 +85,7 @@ def cube_pages(c):
         c.drawString(
             20 * mm, page_h - 30 * mm,
             "Print at 100%%. Cut the solid outline, fold the dashed lines, "
-            "tape the edges into a 20 mm cube. (Page %d of 2, four cubes.)" % (page + 1),
+            "tape the edges into a %d mm cube. (Page %d of 2, four cubes.)" % (CUBE, page + 1),
         )
         for r in range(rows):
             for col in range(cols):
@@ -178,12 +178,29 @@ def pallet_page(c):
     c.drawCentredString((ax + bx) / 2, ay - 10, "PITCH 30 mm")
     c.setFillColorRGB(0, 0, 0)
 
-    # Staging square to the left of the grid.
-    square(-55, PITCH / 2, "staging")
+    # Staging square, as a separate cut-out well clear of the mat. It is taught
+    # as its own anchor, so it goes wherever the arm reaches comfortably --
+    # printing it at a fixed offset from the grid would imply a layout the code
+    # never assumes.
+    sx, sy = page_w / 2, 70 * mm
+    c.setStrokeColorRGB(*CUT)
+    c.setLineWidth(1.1)
+    c.setDash(4, 3)
+    c.rect(sx - 22 * mm, sy - 20 * mm, 44 * mm, 40 * mm, stroke=1, fill=0)
+    c.setDash()
+    c.rect(sx - half, sy - half + 3 * mm, s, s, stroke=1, fill=0)
+    c.setFont("Helvetica", 8)
+    c.drawCentredString(sx, sy - half - 8, "staging")
+    c.setFillColorRGB(*FOLD)
+    c.drawCentredString(sx, sy - 17 * mm, "cut out and place anywhere the arm reaches")
+    c.setFillColorRGB(0, 0, 0)
 
     c.setFont("Helvetica", 8)
     c.setFillColorRGB(*FOLD)
-    c.drawString(20 * mm, 40 * mm, "Cells and the staging spot are 20 mm squares; one cube footprint each.")
+    c.drawString(
+        20 * mm, 40 * mm,
+        "Cells and the staging spot are %d mm squares; one cube footprint each." % CUBE,
+    )
     c.setFillColorRGB(0, 0, 0)
     c.showPage()
 
